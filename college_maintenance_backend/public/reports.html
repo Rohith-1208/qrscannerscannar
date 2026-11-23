@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maintenance Reports Audit - College Maintenance</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/app.js"></script>
+  <script src="/js/admin_common.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <div id="sidebarContainer"></div>
+
+    <main class="main-wrapper">
+      <header class="topbar">
+        <div>
+          <h1>Maintenance Reports Audit</h1>
+        </div>
+        <div class="topbar-meta">
+          <span><span id="reportsCount">0</span> Filtered Records</span>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <!-- Filter Bar -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-body" style="padding: 16px 24px;">
+            <div class="filter-bar">
+              <input type="text" id="filterSystemId" class="search-input" placeholder="System ID / Name...">
+              <select id="filterDepartment" class="select-input">
+                <option value="">All Departments</option>
+              </select>
+              <select id="filterStatus" class="select-input">
+                <option value="">All Statuses</option>
+                <option value="No issues reported">No issues reported</option>
+                <option value="Issues identified">Issues identified</option>
+              </select>
+              <input type="date" id="filterFromDate" class="date-input" title="From Date">
+              <input type="date" id="filterToDate" class="date-input" title="To Date">
+              <button class="btn btn-secondary btn-sm" onclick="applyFilters()">Filter</button>
+              <button class="btn btn-secondary btn-sm" onclick="clearFilters()">Reset</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reports Table -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Verified Inspection Reports</h3>
+          </div>
+          <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Report ID</th>
+                    <th>Equipment</th>
+                    <th>Location</th>
+                    <th>Technician</th>
+                    <th>Date & Time</th>
+                    <th>GPS Proximity</th>
+                    <th>Overall Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="reportsTableBody">
+                  <tr><td colspan="8" style="text-align: center; color: #64748b; padding: 30px;">Loading reports...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: View Full Report Details -->
+  <div id="reportDetailModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 700px;">
+      <div class="modal-header">
+        <div>
+          <h3 id="modalReportId">Maintenance Report Details</h3>
+          <p id="modalSystemSub" style="font-size: 13px; color: #64748b; margin-top: 2px;"></p>
+        </div>
+        <button class="modal-close" onclick="closeModal('reportDetailModal')">&times;</button>
+      </div>
+      <div class="modal-body" id="modalReportBody">
+        Loading...
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('reportDetailModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    renderSidebar('reports');
+
+    let allReports = [];
+
+    async function loadReports() {
+      const res = await authFetch('/api/maintenance/all-reports');
+      if (!res || !res.success) return;
+      allReports = res.reports || [];
+      populateDepartmentFilter();
+      renderReportsTable(allReports);
+
+      // Check if report_id query param in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const repId = urlParams.get('report_id');
+      if (repId) inspectReport(repId);
+    }
+
+    function populateDepartmentFilter() {
+      const depts = Array.from(new Set(allReports.map(r => r.department).filter(Boolean))).sort();
+      const sel = document.getElementById('filterDepartment');
+      sel.innerHTML = '<option value="">All Departments</option>' + depts.map(d => `<option value="${d}">${d}</option>`).join('');
+    }
+
+    function renderReportsTable(reports) {
+      document.getElementById('reportsCount').innerText = reports.length;
+      const tbody = document.getElementById('reportsTableBody');
+
+      if (reports.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #64748b; padding: 30px;">No maintenance reports found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = reports.map(r => `
+        <tr>
+          <td><b style="color: var(--accent);">${r.report_id}</b></td>
+          <td>
+            <b>${r.system_id}</b><br>
+            <small style="color: #64748b;">${r.equipment_name}</small>
+          </td>
+          <td>${r.department} (${r.room_number})</td>
+          <td>${r.agent_name}</td>
+          <td>${r.maintenance_date} <small style="color: #64748b;">${r.maintenance_time}</small></td>
+          <td><span class="badge badge-verified">Verified (${parseFloat(r.calculated_distance || 0).toFixed(1)}m)</span></td>
+          <td>
+            ${r.overall_status === 'No issues reported'
+              ? '<span class="badge badge-working">No Issues</span>'
+              : '<span class="badge badge-issues">Issues Identified</span>'}
+          </td>
+          <td>
+            <button class="btn btn-secondary btn-sm" onclick="inspectReport('${r.report_id}')">
+              Inspect &rarr;
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function applyFilters() {
+      const sys = document.getElementById('filterSystemId').value.toLowerCase().trim();
+      const dept = document.getElementById('filterDepartment').value;
+      const status = document.getElementById('filterStatus').value;
+      const from = document.getElementById('filterFromDate').value;
+      const to = document.getElementById('filterToDate').value;
+
+      const filtered = allReports.filter(r => {
+        const matchSys = !sys || r.system_id.toLowerCase().includes(sys) || r.equipment_name.toLowerCase().includes(sys);
+        const matchDept = !dept || r.department === dept;
+        const matchStatus = !status || r.overall_status === status;
+        const matchFrom = !from || r.maintenance_date >= from;
+        const matchTo = !to || r.maintenance_date <= to;
+        return matchSys && matchDept && matchStatus && matchFrom && matchTo;
+      });
+
+      renderReportsTable(filtered);
+    }
+
+    function clearFilters() {
+      document.getElementById('filterSystemId').value = '';
+      document.getElementById('filterDepartment').value = '';
+      document.getElementById('filterStatus').value = '';
+      document.getElementById('filterFromDate').value = '';
+      document.getElementById('filterToDate').value = '';
+      renderReportsTable(allReports);
+    }
+
+    async function inspectReport(reportId) {
+      openModal('reportDetailModal');
+      document.getElementById('modalReportId').innerText = 'Maintenance Report: ' + reportId;
+      document.getElementById('modalReportBody').innerHTML = '<div style="text-align: center; padding: 24px;">Loading inspection details...</div>';
+
+      const res = await authFetch(`/api/maintenance/report-details?report_id=${encodeURIComponent(reportId)}`);
+      if (!res || !res.success) {
+        document.getElementById('modalReportBody').innerHTML = '<div class="alert alert-danger">Failed to load report details.</div>';
+        return;
+      }
+
+      const rep = res.report;
+      const answers = res.answers || [];
+
+      document.getElementById('modalSystemSub').innerText = `${rep.system_id} - ${rep.equipment_name} (${rep.department})`;
+
+      document.getElementById('modalReportBody').innerHTML = `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
+          <h4 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: #1e3a8a; margin-bottom: 10px;">
+            &#x1F4CD; Physical Location Verification Evidence
+          </h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+            <div><b>Department:</b> ${rep.department} (${rep.room_number})</div>
+            <div><b>Inspecting Agent:</b> ${rep.agent_name} (${rep.agent_id})</div>
+            <div><b>Registered Coordinates:</b> ${parseFloat(rep.registered_latitude).toFixed(6)}, ${parseFloat(rep.registered_longitude).toFixed(6)}</div>
+            <div><b>Agent GPS Coordinates:</b> ${parseFloat(rep.agent_latitude).toFixed(6)}, ${parseFloat(rep.agent_longitude).toFixed(6)}</div>
+            <div><b>Calculated Haversine Distance:</b> <span style="color: var(--success); font-weight: 700;">${parseFloat(rep.calculated_distance).toFixed(2)} metres</span> (&le; ${rep.allowed_radius}m permitted)</div>
+            <div><b>GPS Device Accuracy:</b> &plusmn;${parseFloat(rep.gps_accuracy).toFixed(1)} metres</div>
+            <div><b>Inspection Timestamp:</b> ${rep.maintenance_date} at ${rep.maintenance_time}</div>
+            <div><b>Verification Result:</b> <span class="badge badge-verified">GEO-VERIFIED</span></div>
+          </div>
+        </div>
+
+        <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 12px;">Equipment Inspection Checklist</h4>
+        <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 16px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr style="background: #f1f5f9; border-bottom: 1px solid #e2e8f0;">
+                <th style="padding: 10px 14px; text-align: left;">Inspection Question</th>
+                <th style="padding: 10px 14px; text-align: center; width: 100px;">Answer</th>
+                <th style="padding: 10px 14px; text-align: left;">Issue Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${answers.map(ans => `
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 10px 14px;">${ans.question_text}</td>
+                  <td style="padding: 10px 14px; text-align: center;">
+                    ${ans.answer === 'YES' ? '<span class="badge badge-working">YES</span>' : '<span class="badge badge-issues">NO</span>'}
+                  </td>
+                  <td style="padding: 10px 14px; color: ${ans.answer === 'NO' ? '#dc2626' : '#64748b'};">
+                    ${ans.issue_description || 'None reported'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        ${rep.notes ? `<div style="font-size: 13px; margin-top: 10px;"><b>Agent Notes:</b> ${rep.notes}</div>` : ''}
+      `;
+    }
+
+    loadReports();
+  </script>
+</body>
+</html>

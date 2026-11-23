@@ -6,6 +6,8 @@
 .DS_Store
 Thumbs.db
 desktop.ini
+node_modules/
+package-lock.json
 
 # Flutter & Dart build artifacts
 college_maintenance_app/.dart_tool/

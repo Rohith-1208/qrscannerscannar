@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>College Admin Login - Equipment Maintenance Management</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body class="login-body">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="logo-badge">QM</div>
+      <h2>College Administrator</h2>
+      <p>Equipment Maintenance Management System</p>
+    </div>
+
+    <div id="errorAlert" class="alert alert-danger" style="display: none;"></div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="email">Admin Email</label>
+        <input type="email" id="email" class="form-control" placeholder="admin@college.edu" required autofocus value="admin@college.edu">
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" class="form-control" placeholder="••••••••" required value="admin123">
+      </div>
+
+      <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px; padding: 12px;">
+        Sign In to Admin Dashboard
+      </button>
+
+      <div style="margin-top: 20px; font-size: 12px; color: #64748b; text-align: center;">
+        Default credentials: <b>admin@college.edu</b> / <b>admin123</b>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // If already logged in, redirect
+    if (localStorage.getItem('admin_token')) {
+      window.location.href = '/admin/dashboard';
+    }
+
+    const form = document.getElementById('loginForm');
+    const alertBox = document.getElementById('errorAlert');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertBox.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Signing In...';
+
+      try {
+        const res = await fetch('/api/auth/admin-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('email').value.trim(),
+            password: document.getElementById('password').value
+          })
+        });
+
+        const data = await res.json();
+        if (data.success && data.token) {
+          localStorage.setItem('admin_token', data.token);
+          localStorage.setItem('admin_user', JSON.stringify(data.admin));
+          window.location.href = '/admin/dashboard';
+        } else {
+          alertBox.innerText = data.error || 'Authentication failed.';
+          alertBox.style.display = 'block';
+        }
+      } catch (err) {
+        alertBox.innerText = 'Cannot reach backend server. Please verify Express server is running.';
+        alertBox.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Sign In to Admin Dashboard';
+      }
+    });
+  </script>
+</body>
+</html>

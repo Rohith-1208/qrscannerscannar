@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Equipment & QR Codes - College Maintenance</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/app.js"></script>
+  <script src="/js/admin_common.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <div id="sidebarContainer"></div>
+
+    <main class="main-wrapper">
+      <header class="topbar">
+        <div>
+          <h1>College Equipment & Secure QR Codes</h1>
+        </div>
+        <div>
+          <button class="btn btn-primary" onclick="openModal('registerSystemModal')">
+            + Register New Equipment
+          </button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div id="alertBox" class="alert" style="display: none;"></div>
+
+        <!-- Search & Filter Bar -->
+        <div class="card" style="margin-bottom: 20px;">
+          <div class="card-body" style="padding: 16px 24px;">
+            <div class="filter-bar">
+              <input type="text" id="searchInput" class="search-input" placeholder="Search System ID, Name, Room..." style="min-width: 280px;">
+              <select id="departmentFilter" class="select-input">
+                <option value="">All Departments</option>
+              </select>
+              <button class="btn btn-secondary btn-sm" onclick="filterSystems()">Filter</button>
+              <button class="btn btn-secondary btn-sm" onclick="clearFilter()">Reset</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Systems Table -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Registered Equipment Inventory (<span id="systemsCount">0</span>)</h3>
+          </div>
+          <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>System ID</th>
+                    <th>Equipment Name</th>
+                    <th>Department & Location</th>
+                    <th>Registered Coordinates</th>
+                    <th>Permitted Radius</th>
+                    <th>Status</th>
+                    <th>QR Version</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="systemsTableBody">
+                  <tr><td colspan="8" style="text-align: center; color: #64748b; padding: 30px;">Loading systems...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: Register Equipment -->
+  <div id="registerSystemModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Register New College Equipment</h3>
+        <button class="modal-close" onclick="closeModal('registerSystemModal')">&times;</button>
+      </div>
+      <form id="createSystemForm">
+        <div class="modal-body">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>System ID * (e.g. SYS-011)</label>
+              <input type="text" id="regSystemId" class="form-control" required placeholder="SYS-011">
+            </div>
+            <div class="form-group">
+              <label>Equipment Name *</label>
+              <input type="text" id="regEquipName" class="form-control" required placeholder="Desktop Workstation 11">
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Equipment Type</label>
+              <select id="regEquipType" class="form-control">
+                <option value="Desktop Computer">Desktop Computer</option>
+                <option value="Server Workstation">Server Workstation</option>
+                <option value="Laboratory Instrument">Laboratory Instrument</option>
+                <option value="Network Switch/Router">Network Switch/Router</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Department *</label>
+              <input type="text" id="regDept" class="form-control" required placeholder="Computer Science & Engineering">
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Building Name</label>
+              <input type="text" id="regBuilding" class="form-control" placeholder="Tech Block A">
+            </div>
+            <div class="form-group">
+              <label>Room / Lab Number *</label>
+              <input type="text" id="regRoom" class="form-control" required placeholder="Lab 101">
+            </div>
+          </div>
+
+          <!-- GPS Geo-Fence Capture -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-size: 13px; font-weight: 600; color: #1e3a8a;">Equipment GPS Location (Geo-Fence)</span>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="captureDeviceCoordinates('regLat', 'regLon', 'gpsStatusSpan')">
+                &#x25CE; Auto-Get Device GPS
+              </button>
+            </div>
+            <div id="gpsStatusSpan" style="font-size: 12px; margin-bottom: 8px;"></div>
+            <div class="form-grid-2">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Latitude *</label>
+                <input type="number" step="0.00000001" id="regLat" class="form-control" required placeholder="13.07510000">
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Longitude *</label>
+                <input type="number" step="0.00000001" id="regLon" class="form-control" required placeholder="80.11700000">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Permitted GPS Radius (Metres)</label>
+            <input type="number" id="regRadius" class="form-control" value="10" min="1" max="100" required>
+            <small style="color: #64748b;">Technicians must be within this distance to perform maintenance (Default: 10m).</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('registerSystemModal')">Cancel</button>
+          <button type="submit" id="saveSystemBtn" class="btn btn-primary">Save & Generate Secure QR</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: View QR Code -->
+  <div id="viewQrModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 id="qrModalTitle">Equipment QR Code</h3>
+        <button class="modal-close" onclick="closeModal('viewQrModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="qrCodeContainer"></div>
+      </div>
+      <div class="modal-footer" style="justify-content: space-between;">
+        <button type="button" class="btn btn-danger btn-sm" onclick="handleRegenerateQr()">
+          Regenerate QR
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('viewQrModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    renderSidebar('systems');
+
+    let allSystems = [];
+    let currentViewingSystemId = null;
+
+    async function loadSystems() {
+      const res = await authFetch('/api/systems/list');
+      if (!res || !res.success) return;
+      allSystems = res.systems || [];
+      populateDepartments();
+      renderSystemsTable(allSystems);
+    }
+
+    function populateDepartments() {
+      const deptSet = new Set(allSystems.map(s => s.department).filter(Boolean));
+      const select = document.getElementById('departmentFilter');
+      select.innerHTML = '<option value="">All Departments</option>' + 
+        Array.from(deptSet).sort().map(d => `<option value="${d}">${d}</option>`).join('');
+    }
+
+    function renderSystemsTable(systems) {
+      document.getElementById('systemsCount').innerText = systems.length;
+      const tbody = document.getElementById('systemsTableBody');
+
+      if (systems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #64748b; padding: 30px;">No equipment records found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = systems.map(s => {
+        const qrPayload = {
+          system_id: s.system_id,
+          latitude: parseFloat(parseFloat(s.latitude).toFixed(6)),
+          longitude: parseFloat(parseFloat(s.longitude).toFixed(6)),
+          radius: parseInt(s.allowed_radius, 10),
+          version: parseInt(s.qr_version || 1, 10),
+          signature: s.signature || ''
+        };
+        const payloadStr = JSON.stringify(qrPayload);
+
+        return `
+          <tr>
+            <td><b style="color: var(--primary);">${s.system_id}</b></td>
+            <td>
+              <b>${s.equipment_name}</b><br>
+              <small style="color: #64748b;">${s.equipment_type}</small>
+            </td>
+            <td>
+              ${s.department}<br>
+              <small style="color: #64748b;">${s.building} - ${s.room_number}</small>
+            </td>
+            <td>
+              <span style="font-family: monospace; font-size: 12px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">
+                ${parseFloat(s.latitude).toFixed(6)}, ${parseFloat(s.longitude).toFixed(6)}
+              </span>
+            </td>
+            <td>${s.allowed_radius} metres</td>
+            <td>
+              ${s.status === 'working' ? '<span class="badge badge-working">Working</span>' :
+                s.status === 'issue_identified' ? '<span class="badge badge-issues">Issues Identified</span>' :
+                '<span class="badge badge-inactive">Disabled</span>'}
+            </td>
+            <td>
+              <span class="badge" style="background: #eff6ff; color: #1d4ed8; font-weight: 700;">
+                v${s.qr_version || 1}
+              </span>
+            </td>
+            <td>
+              <div style="display: flex; gap: 6px;">
+                <button class="btn btn-secondary btn-sm" onclick='showQrModal("${s.system_id}", ${JSON.stringify(payloadStr)})'>
+                  View QR
+                </button>
+                <a href="/admin/qr-print?system_id=${encodeURIComponent(s.system_id)}" target="_blank" class="btn btn-secondary btn-sm">
+                  Print
+                </a>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function filterSystems() {
+      const q = document.getElementById('searchInput').value.toLowerCase().trim();
+      const dept = document.getElementById('departmentFilter').value;
+
+      const filtered = allSystems.filter(s => {
+        const matchesQ = !q || s.system_id.toLowerCase().includes(q) || s.equipment_name.toLowerCase().includes(q) || s.room_number.toLowerCase().includes(q);
+        const matchesDept = !dept || s.department === dept;
+        return matchesQ && matchesDept;
+      });
+
+      renderSystemsTable(filtered);
+    }
+
+    function clearFilter() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('departmentFilter').value = '';
+      renderSystemsTable(allSystems);
+    }
+
+    function showQrModal(systemId, payloadString) {
+      currentViewingSystemId = systemId;
+      document.getElementById('qrModalTitle').innerText = 'QR Code: ' + systemId;
+      renderQRCodeOnCanvas('qrCodeContainer', payloadString);
+      openModal('viewQrModal');
+    }
+
+    async function handleRegenerateQr() {
+      if (!currentViewingSystemId) return;
+      if (!confirm(`Regenerate QR for ${currentViewingSystemId}? Previous printed version will be invalidated.`)) return;
+
+      const res = await authFetch('/api/qr/generate', {
+        method: 'POST',
+        body: JSON.stringify({ system_id: currentViewingSystemId, regenerate: true })
+      });
+
+      if (res && res.success) {
+        alert('New QR code generated successfully!');
+        renderQRCodeOnCanvas('qrCodeContainer', res.json_string);
+        loadSystems();
+      } else {
+        alert(res?.error || 'Failed to regenerate QR.');
+      }
+    }
+
+    // Register Form submission
+    document.getElementById('createSystemForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('saveSystemBtn');
+      btn.disabled = true;
+      btn.innerText = 'Registering...';
+
+      const payload = {
+        system_id: document.getElementById('regSystemId').value.trim(),
+        equipment_name: document.getElementById('regEquipName').value.trim(),
+        equipment_type: document.getElementById('regEquipType').value,
+        department: document.getElementById('regDept').value.trim(),
+        building: document.getElementById('regBuilding').value.trim(),
+        room_number: document.getElementById('regRoom').value.trim(),
+        latitude: parseFloat(document.getElementById('regLat').value),
+        longitude: parseFloat(document.getElementById('regLon').value),
+        allowed_radius: parseInt(document.getElementById('regRadius').value, 10),
+      };
+
+      const res = await authFetch('/api/systems/create', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      btn.disabled = false;
+      btn.innerText = 'Save & Generate Secure QR';
+
+      if (res && res.success) {
+        closeModal('registerSystemModal');
+        document.getElementById('createSystemForm').reset();
+        alert(`Equipment '${payload.system_id}' successfully registered.`);
+        loadSystems();
+      } else {
+        alert(res?.error || 'Registration failed.');
+      }
+    });
+
+    loadSystems();
+  </script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Service Agents - College Maintenance</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/app.js"></script>
+  <script src="/js/admin_common.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <div id="sidebarContainer"></div>
+
+    <main class="main-wrapper">
+      <header class="topbar">
+        <div>
+          <h1>Service Agent Management</h1>
+        </div>
+        <div>
+          <button class="btn btn-primary" onclick="openModal('addAgentModal')">
+            + Add Service Agent
+          </button>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <div class="card">
+          <div class="card-header">
+            <h3>Registered Service Agents (<span id="agentsCount">0</span>)</h3>
+          </div>
+          <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Agent ID</th>
+                    <th>Name</th>
+                    <th>Email Address</th>
+                    <th>Total Inspections</th>
+                    <th>Account Status</th>
+                    <th>Registered On</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="agentsTableBody">
+                  <tr><td colspan="7" style="text-align: center; color: #64748b; padding: 30px;">Loading agents...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: Add Service Agent -->
+  <div id="addAgentModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Service Agent</h3>
+        <button class="modal-close" onclick="closeModal('addAgentModal')">&times;</button>
+      </div>
+      <form id="addAgentForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Agent ID (Optional - Auto-generated if blank)</label>
+            <input type="text" id="newAgentId" class="form-control" placeholder="e.g. AGT-002">
+          </div>
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" id="newAgentName" class="form-control" required placeholder="Alex Morgan">
+          </div>
+          <div class="form-group">
+            <label>Registered Email Address *</label>
+            <input type="email" id="newAgentEmail" class="form-control" required placeholder="alex@college.edu">
+          </div>
+          <div class="form-group">
+            <label>Secure Password *</label>
+            <input type="password" id="newAgentPassword" class="form-control" required placeholder="At least 6 characters">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('addAgentModal')">Cancel</button>
+          <button type="submit" id="saveAgentBtn" class="btn btn-primary">Create Agent Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    renderSidebar('agents');
+
+    async function loadAgents() {
+      const res = await authFetch('/api/agents/list');
+      if (!res || !res.success) return;
+      const agents = res.agents || [];
+      document.getElementById('agentsCount').innerText = agents.length;
+      const tbody = document.getElementById('agentsTableBody');
+
+      if (agents.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 30px;">No service agents registered yet.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = agents.map(a => `
+        <tr>
+          <td><b style="color: var(--primary);">${a.agent_id}</b></td>
+          <td><b>${a.name}</b></td>
+          <td>${a.email}</td>
+          <td><span style="font-weight: 600; color: var(--accent);">${a.total_reports || 0} reports</span></td>
+          <td>
+            ${a.status === 'active'
+              ? '<span class="badge badge-active">Active</span>'
+              : '<span class="badge badge-inactive">Inactive</span>'}
+          </td>
+          <td>${(a.created_at || '').substring(0, 10)}</td>
+          <td>
+            <button class="btn btn-secondary btn-sm" onclick="toggleAgentStatus('${a.agent_id}', '${a.status === 'active' ? 'inactive' : 'active'}')">
+              ${a.status === 'active' ? 'Deactivate' : 'Activate'}
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function toggleAgentStatus(agentId, newStatus) {
+      if (!confirm(`Change status for ${agentId} to ${newStatus}?`)) return;
+
+      const res = await authFetch('/api/agents/update', {
+        method: 'POST',
+        body: JSON.stringify({ agent_id: agentId, status: newStatus })
+      });
+
+      if (res && res.success) {
+        loadAgents();
+      } else {
+        alert(res?.error || 'Failed to update agent.');
+      }
+    }
+
+    document.getElementById('addAgentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('saveAgentBtn');
+      btn.disabled = true;
+      btn.innerText = 'Creating...';
+
+      const res = await authFetch('/api/agents/create', {
+        method: 'POST',
+        body: JSON.stringify({
+          agent_id: document.getElementById('newAgentId').value.trim(),
+          name: document.getElementById('newAgentName').value.trim(),
+          email: document.getElementById('newAgentEmail').value.trim(),
+          password: document.getElementById('newAgentPassword').value
+        })
+      });
+
+      btn.disabled = false;
+      btn.innerText = 'Create Agent Account';
+
+      if (res && res.success) {
+        closeModal('addAgentModal');
+        document.getElementById('addAgentForm').reset();
+        alert('Service agent account created successfully!');
+        loadAgents();
+      } else {
+        alert(res?.error || 'Failed to create agent.');
+      }
+    });
+
+    loadAgents();
+  </script>
+</body>
+</html>

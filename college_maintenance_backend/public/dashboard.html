@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - College Equipment Maintenance</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/js/admin_common.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <div id="sidebarContainer"></div>
+
+    <main class="main-wrapper">
+      <header class="topbar">
+        <div>
+          <h1>Dashboard Overview</h1>
+        </div>
+        <div class="topbar-meta">
+          <span>College Campus Central Network (Express.js API)</span>
+          <span>&bull;</span>
+          <span id="currentDateDisplay"></span>
+        </div>
+      </header>
+
+      <div class="page-content">
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card blue">
+            <span class="label">Total Registered Systems</span>
+            <span class="value" id="statTotalSystems">...</span>
+          </div>
+
+          <div class="stat-card green">
+            <span class="label">Working Normally</span>
+            <span class="value" id="statWorkingSystems">...</span>
+          </div>
+
+          <div class="stat-card red">
+            <span class="label">Identified Issues</span>
+            <span class="value" id="statIssueSystems">...</span>
+          </div>
+
+          <div class="stat-card orange">
+            <span class="label">Pending Inspections (Today)</span>
+            <span class="value" id="statPendingInspections">...</span>
+          </div>
+
+          <div class="stat-card purple">
+            <span class="label">Active Service Agents</span>
+            <span class="value" id="statTotalAgents">...</span>
+          </div>
+
+          <div class="stat-card blue">
+            <span class="label">Total Reports Logged</span>
+            <span class="value" id="statTotalReports">...</span>
+          </div>
+        </div>
+
+        <!-- Recent Maintenance Reports Card -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Recent Maintenance Reports (Geo-Verified)</h3>
+            <a href="/admin/reports" class="btn btn-secondary btn-sm">View All Reports &rarr;</a>
+          </div>
+          <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Report ID</th>
+                    <th>Equipment</th>
+                    <th>Location</th>
+                    <th>Technician</th>
+                    <th>Date & Time</th>
+                    <th>Geo-Verification</th>
+                    <th>Overall Status</th>
+                  </tr>
+                </thead>
+                <tbody id="recentReportsTable">
+                  <tr><td colspan="7" style="text-align: center; color: #64748b; padding: 24px;">Loading live database records...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Department Summary Card -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Department Equipment Health Summary</h3>
+          </div>
+          <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Department</th>
+                    <th>Total Equipment</th>
+                    <th>Working</th>
+                    <th>With Issues</th>
+                    <th>Health Rate</th>
+                  </tr>
+                </thead>
+                <tbody id="departmentTable">
+                  <tr><td colspan="5" style="text-align: center; color: #64748b; padding: 24px;">Loading departments...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    renderSidebar('dashboard');
+    document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    async function loadDashboardData() {
+      try {
+        // Fetch systems and reports in parallel from Express API
+        const [systemsRes, reportsRes, agentsRes] = await Promise.all([
+          authFetch('/api/systems/list'),
+          authFetch('/api/maintenance/all-reports'),
+          authFetch('/api/agents/list')
+        ]);
+
+        if (!systemsRes || !reportsRes) return;
+
+        const systems = systemsRes.systems || [];
+        const reports = reportsRes.reports || [];
+        const agents = agentsRes ? (agentsRes.agents || []) : [];
+
+        // Calculate statistics
+        const totalSystems = systems.length;
+        const workingSystems = systems.filter(s => s.status === 'working').length;
+        const issueSystems = systems.filter(s => s.status === 'issue_identified').length;
+        const totalReports = reports.length;
+        const activeAgents = agents.filter(a => a.status === 'active').length;
+
+        // Pending today (systems without inspection today)
+        const todayStr = new Date().toISOString().split('T')[0];
+        const inspectedTodaySet = new Set(
+          reports.filter(r => r.maintenance_date === todayStr).map(r => r.system_id)
+        );
+        const pendingToday = systems.filter(s => s.status !== 'disabled' && !inspectedTodaySet.has(s.system_id)).length;
+
+        // Update DOM
+        document.getElementById('statTotalSystems').innerText = totalSystems;
+        document.getElementById('statWorkingSystems').innerText = workingSystems;
+        document.getElementById('statIssueSystems').innerText = issueSystems;
+        document.getElementById('statPendingInspections').innerText = pendingToday;
+        document.getElementById('statTotalAgents').innerText = activeAgents;
+        document.getElementById('statTotalReports').innerText = totalReports;
+
+        // Populate Recent Reports
+        const reportsTbody = document.getElementById('recentReportsTable');
+        const recent = reports.slice(0, 8);
+
+        if (recent.length === 0) {
+          reportsTbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 30px;">No maintenance reports recorded yet.</td></tr>`;
+        } else {
+          reportsTbody.innerHTML = recent.map(r => `
+            <tr>
+              <td><a href="/admin/reports?report_id=${encodeURIComponent(r.report_id)}" style="color: var(--accent); font-weight: 600; text-decoration: none;">${r.report_id}</a></td>
+              <td>
+                <b>${r.system_id}</b><br>
+                <small style="color: #64748b;">${r.equipment_name}</small>
+              </td>
+              <td>${r.department} (${r.room_number})</td>
+              <td>${r.agent_name}</td>
+              <td>${r.maintenance_date} <small style="color: #64748b;">${r.maintenance_time}</small></td>
+              <td><span class="badge badge-verified">Verified (&le; 10m)</span></td>
+              <td>
+                ${r.overall_status === 'No issues reported'
+                  ? '<span class="badge badge-working">No Issues</span>'
+                  : '<span class="badge badge-issues">Issues Identified</span>'}
+              </td>
+            </tr>
+          `).join('');
+        }
+
+        // Department breakdown
+        const deptMap = {};
+        for (const s of systems) {
+          const dept = s.department || 'General';
+          if (!deptMap[dept]) deptMap[dept] = { total: 0, working: 0, issues: 0 };
+          deptMap[dept].total++;
+          if (s.status === 'working') deptMap[dept].working++;
+          if (s.status === 'issue_identified') deptMap[dept].issues++;
+        }
+
+        const deptTbody = document.getElementById('departmentTable');
+        const deptEntries = Object.entries(deptMap);
+
+        if (deptEntries.length === 0) {
+          deptTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">No departments registered.</td></tr>`;
+        } else {
+          deptTbody.innerHTML = deptEntries.map(([deptName, d]) => {
+            const rate = d.total > 0 ? Math.round((d.working / d.total) * 100) : 0;
+            const barColor = rate >= 80 ? 'var(--success)' : (rate >= 50 ? 'var(--warning)' : 'var(--danger)');
+            return `
+              <tr>
+                <td><b>${deptName}</b></td>
+                <td>${d.total}</td>
+                <td><span style="color: var(--success); font-weight: 600;">${d.working}</span></td>
+                <td><span style="color: var(--danger); font-weight: 600;">${d.issues}</span></td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="flex: 1; background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden; max-width: 140px;">
+                      <div style="width: ${rate}%; background: ${barColor}; height: 100%;"></div>
+                    </div>
+                    <span style="font-size: 12px; font-weight: 600;">${rate}%</span>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+      } catch (err) {
+        console.error('Dashboard load error', err);
+      }
+    }
+
+    loadDashboardData();
+  </script>
+</body>
+</html>
