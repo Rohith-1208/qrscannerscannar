@@ -1,0 +1,22 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Flutter & Dart build artifacts
+college_maintenance_app/.dart_tool/
+college_maintenance_app/.flutter-plugins
+college_maintenance_app/.flutter-plugins-dependencies
+college_maintenance_app/.packages
+college_maintenance_app/build/
+college_maintenance_app/*.dill
+*.dill
+
+# Visual Studio Code / IDEs
+.vscode/
+.idea/
+*.iml
