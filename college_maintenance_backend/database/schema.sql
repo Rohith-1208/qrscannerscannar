@@ -141,16 +141,14 @@ CREATE TABLE IF NOT EXISTS `auth_tokens` (
 -- ==============================================================================
 
 -- 1. Default Admin Account (Password: admin123)
--- Hash generated using password_hash('admin123', PASSWORD_BCRYPT)
 INSERT INTO `admins` (`admin_id`, `name`, `email`, `password_hash`, `created_at`)
-VALUES (1, 'College System Administrator', 'admin@college.edu', '$2y$10$w81V7jWkKgzpE2hRk0O2g.W1m82Fk4s/E3RzH2JzPjE9K1D4a1K2C', NOW())
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`);
+VALUES (1, 'College System Administrator', 'admin@college.edu', '$2a$10$VpEuhH8rme.1WWWVaHCJW.UMOu5dsCKu42EYQbJydnEE6wYuj1Awy', NOW())
+ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `password_hash`=VALUES(`password_hash`);
 
 -- 2. Default Service Agent (ID: AGT-001, Password: agent123)
--- Hash generated using password_hash('agent123', PASSWORD_BCRYPT)
 INSERT INTO `agents` (`agent_id`, `name`, `email`, `password_hash`, `status`, `created_at`)
-VALUES ('AGT-001', 'John Doe (Lead Technician)', 'agent@college.edu', '$2y$10$0d7eGk0M7Z8Jk3Tz9Y1Yv.m8Gz7L2kQ1oP3kE4R5J6H7K8L9M0N1O', 'active', NOW())
-ON DUPLICATE KEY UPDATE `name`=VALUES(`name`);
+VALUES ('AGT-001', 'John Doe (Lead Technician)', 'agent@college.edu', '$2a$10$77v.GD3rb94ec7K3QhdHduHNxWxuwGGvU8CXvZplE3swKq2Sf.CZS', 'active', NOW())
+ON DUPLICATE KEY UPDATE `name`=VALUES(`name`), `password_hash`=VALUES(`password_hash`);
 
 -- 3. Default Checklist Template for Desktop Computers
 INSERT INTO `checklist_templates` (`template_id`, `equipment_type`, `template_name`, `status`)
