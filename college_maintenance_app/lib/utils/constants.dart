@@ -7,9 +7,9 @@ class AppConstants {
   static const String appVersion = '1.0.0';
 
   // Default Backend URL:
-  // - For Android Emulator: http://10.0.2.2:8000 or http://10.0.2.2/qr_manage_system/college_maintenance_backend
-  // - For Physical Device on Wi-Fi: http://<PC_LOCAL_IP>:8000
-  static const String defaultBaseUrl = 'http://10.0.2.2:8000';
+  // - Default set to local Wi-Fi IP so physical Android phones connect immediately
+  // - For Android Emulator: Change via Settings gear to http://10.0.2.2:8000
+  static const String defaultBaseUrl = 'http://192.168.29.35:8000';
 
   // Business Rules
   static const double permittedRadiusMetres = 10.0;

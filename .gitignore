@@ -28,3 +28,5 @@ college_maintenance_app/android/local.properties
 college_maintenance_app/.idea/
 college_maintenance_app/.dart_tool/
 college_maintenance_app/build/
+
+college_maintenance_backend/public/*.apk

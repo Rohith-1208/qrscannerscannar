@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -198,8 +199,11 @@ class ApiService {
   }
 
   static String _formatNetworkError(dynamic e) {
+    if (e is TimeoutException) {
+      return 'Connection timed out reaching $_baseUrl.\nPlease ensure PC and phone are on the same Wi-Fi and tap the ⚙️ settings icon to verify the server IP.';
+    }
     if (e is SocketException) {
-      return 'Cannot connect to backend server ($_baseUrl). Please verify server address and connection.';
+      return 'Cannot reach backend at $_baseUrl. Tap ⚙️ in top right to check server address.';
     }
     return e.toString();
   }
