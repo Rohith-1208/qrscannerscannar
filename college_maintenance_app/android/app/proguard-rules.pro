@@ -1,0 +1,5 @@
+-keep class com.google.mlkit.** { *; }
+-keep class dev.steenbakker.mobile_scanner.** { *; }
+-dontwarn com.google.mlkit.**
+-keep class androidx.camera.** { *; }
+-dontwarn androidx.camera.**
