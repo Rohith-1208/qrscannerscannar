@@ -22,3 +22,9 @@ college_maintenance_app/*.dill
 .vscode/
 .idea/
 *.iml
+
+college_maintenance_backend/public/app-debug.apk
+college_maintenance_app/android/local.properties
+college_maintenance_app/.idea/
+college_maintenance_app/.dart_tool/
+college_maintenance_app/build/

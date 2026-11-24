@@ -107,7 +107,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         "longitude": 80.117000,
         "radius": 10,
         "version": 1,
-        "signature": "SERVER_GENERATED_SIGNATURE"
+        "signature": "deb429cbe506a4070c14d34ee5f1cd52af1edecf673c51872f7c2714269a4145"
       }),
     );
 

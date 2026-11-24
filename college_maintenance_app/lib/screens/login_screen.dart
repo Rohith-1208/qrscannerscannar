@@ -76,44 +76,80 @@ class _LoginScreenState extends State<LoginScreen> {
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Backend API Server URL'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Enter the PHP backend host URL:\n'
-              '• Android Emulator: http://10.0.2.2:8000\n'
-              '• Real Device Wi-Fi: http://<PC_IP>:8000',
-              style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: urlCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Base URL',
-                hintText: 'http://192.168.1.5:8000',
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Backend API Server URL'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter the Express backend host URL:\n'
+                '• Real Device Wi-Fi: http://192.168.29.35:8000\n'
+                '• Android Emulator: http://10.0.2.2:8000\n'
+                '• Localhost: http://127.0.0.1:8000',
+                style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
               ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  ActionChip(
+                    label: const Text('Wi-Fi (192.168.29.35)', style: TextStyle(fontSize: 11)),
+                    onPressed: () {
+                      setDialogState(() {
+                        urlCtrl.text = 'http://192.168.29.35:8000';
+                      });
+                    },
+                  ),
+                  ActionChip(
+                    label: const Text('Emulator (10.0.2.2)', style: TextStyle(fontSize: 11)),
+                    onPressed: () {
+                      setDialogState(() {
+                        urlCtrl.text = 'http://10.0.2.2:8000';
+                      });
+                    },
+                  ),
+                  ActionChip(
+                    label: const Text('Localhost (8000)', style: TextStyle(fontSize: 11)),
+                    onPressed: () {
+                      setDialogState(() {
+                        urlCtrl.text = 'http://127.0.0.1:8000';
+                      });
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: urlCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Base URL',
+                  hintText: 'http://192.168.29.35:8000',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await StorageService.setServerUrl(urlCtrl.text.trim());
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Server URL set to ${urlCtrl.text.trim()}')),
+                  );
+                }
+              },
+              child: const Text('Save'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await StorageService.setServerUrl(urlCtrl.text.trim());
-              if (ctx.mounted) Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Server URL updated')),
-              );
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
