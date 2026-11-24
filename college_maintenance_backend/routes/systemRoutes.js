@@ -50,6 +50,27 @@ async function listSystems(req, res) {
 
     const [systems] = await pool.execute(sql, params);
 
+    // Ensure every system has an active HMAC-SHA256 signature
+    for (const sys of systems) {
+      if (!sys.signature) {
+        const ver = parseInt(sys.qr_version || 1, 10);
+        const sig = generateQrSignature(
+          sys.system_id,
+          parseFloat(sys.latitude),
+          parseFloat(sys.longitude),
+          parseFloat(sys.allowed_radius),
+          ver
+        );
+        await pool.execute(
+          `INSERT INTO qr_codes (system_id, qr_version, signature, is_active) VALUES (?, ?, ?, 1)
+           ON DUPLICATE KEY UPDATE signature = VALUES(signature), is_active = 1`,
+          [sys.system_id, ver, sig]
+        );
+        sys.qr_version = ver;
+        sys.signature = sig;
+      }
+    }
+
     return res.json({
       success: true,
       count: systems.length,
