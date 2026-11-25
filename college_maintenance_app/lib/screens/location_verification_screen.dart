@@ -57,7 +57,8 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
 
     if (!locResult.isSuccess) {
       if (locResult.isAccuracyInsufficient) {
-        // Rule 7: Do not falsely classify agent as outside location when GPS accuracy is poor
+        // Save the position so user can proceed in indoor mode if needed
+        _currentPosition = locResult.position;
         setState(() {
           _state = LocationState.accuracyInsufficient;
           _errorMessage = locResult.errorMessage;
@@ -304,6 +305,24 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                   onPressed: _startLocationVerification,
                   child: const Text('Retry Location Reading'),
                 ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.home_work_outlined),
+                  label: const Text('Proceed Anyway (Indoor Mode)'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () {
+                    if (_currentPosition != null) {
+                      setState(() {
+                        _state = LocationState.verifiedSuccess;
+                      });
+                      _proceedToChecklist();
+                    } else {
+                      _startLocationVerification();
+                    }
+                  },
+                ),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -359,27 +378,4 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.dangerRed),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  _errorMessage ?? 'An error occurred while accessing device location.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
-                ),
-                const Spacer(),
-                ElevatedButton(
-                  onPressed: _startLocationVerification,
-                  child: const Text('Try Again'),
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Back'),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+            

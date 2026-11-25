@@ -16,7 +16,7 @@ module.exports = {
   QR_HMAC_SECRET_KEY: process.env.QR_HMAC_SECRET || 'c0ll3g3_m41nt_s3cur3_hm4c_s1gn1ng_k3y_#2026!',
 
   // Business Rules
-  DEFAULT_ALLOWED_RADIUS_METRES: parseFloat(process.env.DEFAULT_ALLOWED_RADIUS_METRES || '10.0'),
-  MAX_ACCEPTABLE_GPS_ACCURACY_METRES: parseFloat(process.env.MAX_ACCEPTABLE_GPS_ACCURACY_METRES || '25.0'),
+  DEFAULT_ALLOWED_RADIUS_METRES: parseFloat(process.env.DEFAULT_ALLOWED_RADIUS_METRES || '50.0'),
+  MAX_ACCEPTABLE_GPS_ACCURACY_METRES: parseFloat(process.env.MAX_ACCEPTABLE_GPS_ACCURACY_METRES || '100.0'),
   TOKEN_EXPIRY_DAYS: parseInt(process.env.TOKEN_EXPIRY_DAYS || '30', 10),
 };

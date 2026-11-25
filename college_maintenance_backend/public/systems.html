@@ -155,6 +155,97 @@
     </div>
   </div>
 
+  <!-- MODAL: Edit Equipment -->
+  <div id="editSystemModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Edit Equipment & GPS Location</h3>
+        <button class="modal-close" onclick="closeModal('editSystemModal')">&times;</button>
+      </div>
+      <form id="editSystemForm">
+        <div class="modal-body">
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>System ID</label>
+              <input type="text" id="editSystemId" class="form-control" readonly style="background: #f1f5f9; cursor: not-allowed; font-weight: bold;">
+            </div>
+            <div class="form-group">
+              <label>Equipment Name *</label>
+              <input type="text" id="editEquipName" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Equipment Type</label>
+              <select id="editEquipType" class="form-control">
+                <option value="Desktop Computer">Desktop Computer</option>
+                <option value="Server Workstation">Server Workstation</option>
+                <option value="Laboratory Instrument">Laboratory Instrument</option>
+                <option value="Network Switch/Router">Network Switch/Router</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select id="editStatus" class="form-control">
+                <option value="working">Working</option>
+                <option value="issue_identified">Issue Identified</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Department *</label>
+              <input type="text" id="editDept" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Building Name</label>
+              <input type="text" id="editBuilding" class="form-control">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Room / Lab Number *</label>
+            <input type="text" id="editRoom" class="form-control" required>
+          </div>
+
+          <!-- GPS Geo-Fence Capture -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-size: 13px; font-weight: 600; color: #1e3a8a;">Equipment GPS Location (Geo-Fence)</span>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="captureDeviceCoordinates('editLat', 'editLon', 'editGpsStatusSpan')">
+                &#x25CE; Auto-Get Device GPS
+              </button>
+            </div>
+            <div id="editGpsStatusSpan" style="font-size: 12px; margin-bottom: 8px;"></div>
+            <div class="form-grid-2">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Latitude *</label>
+                <input type="number" step="0.00000001" id="editLat" class="form-control" required placeholder="13.07510000">
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Longitude *</label>
+                <input type="number" step="0.00000001" id="editLon" class="form-control" required placeholder="80.11700000">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Permitted GPS Radius (Metres)</label>
+            <input type="number" id="editRadius" class="form-control" min="1" max="500" required>
+            <small style="color: #64748b;">Set to 50m - 100m for easy testing indoors without false proximity rejections.</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('editSystemModal')">Cancel</button>
+          <button type="submit" id="updateSystemBtn" class="btn btn-primary">Save Changes & Update QR</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL: View QR Code -->
   <div id="viewQrModal" class="modal-overlay">
     <div class="modal-content" style="max-width: 440px;">
@@ -244,6 +335,9 @@
             </td>
             <td>
               <div style="display: flex; gap: 6px;">
+                <button class="btn btn-primary btn-sm" onclick='openEditModal("${s.system_id}")'>
+                  Edit ✏️
+                </button>
                 <button class="btn btn-secondary btn-sm" onclick='showQrModal("${s.system_id}", ${JSON.stringify(payloadStr)})'>
                   View QR
                 </button>
@@ -335,6 +429,63 @@
         loadSystems();
       } else {
         alert(res?.error || 'Registration failed.');
+      }
+    });
+
+    // Open Edit Modal
+    function openEditModal(systemId) {
+      const s = allSystems.find(item => item.system_id === systemId);
+      if (!s) return;
+
+      document.getElementById('editSystemId').value = s.system_id;
+      document.getElementById('editEquipName').value = s.equipment_name;
+      document.getElementById('editEquipType').value = s.equipment_type || 'Desktop Computer';
+      document.getElementById('editStatus').value = s.status || 'working';
+      document.getElementById('editDept').value = s.department;
+      document.getElementById('editBuilding').value = s.building || '';
+      document.getElementById('editRoom').value = s.room_number;
+      document.getElementById('editLat').value = parseFloat(s.latitude).toFixed(8);
+      document.getElementById('editLon').value = parseFloat(s.longitude).toFixed(8);
+      document.getElementById('editRadius').value = s.allowed_radius || 10;
+      document.getElementById('editGpsStatusSpan').innerHTML = '';
+
+      openModal('editSystemModal');
+    }
+
+    // Edit Form Submission
+    document.getElementById('editSystemForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('updateSystemBtn');
+      btn.disabled = true;
+      btn.innerText = 'Saving Changes...';
+
+      const payload = {
+        system_id: document.getElementById('editSystemId').value.trim(),
+        equipment_name: document.getElementById('editEquipName').value.trim(),
+        equipment_type: document.getElementById('editEquipType').value,
+        status: document.getElementById('editStatus').value,
+        department: document.getElementById('editDept').value.trim(),
+        building: document.getElementById('editBuilding').value.trim(),
+        room_number: document.getElementById('editRoom').value.trim(),
+        latitude: parseFloat(document.getElementById('editLat').value),
+        longitude: parseFloat(document.getElementById('editLon').value),
+        allowed_radius: parseInt(document.getElementById('editRadius').value, 10),
+      };
+
+      const res = await authFetch('/api/systems/update', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      btn.disabled = false;
+      btn.innerText = 'Save Changes & Update QR';
+
+      if (res && res.success) {
+        closeModal('editSystemModal');
+        alert(res.message || 'Equipment details updated successfully!');
+        loadSystems();
+      } else {
+        alert(res?.error || 'Update failed.');
       }
     });
 
