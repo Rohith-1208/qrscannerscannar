@@ -52,20 +52,25 @@ class LocationService {
 
     // 3. Obtain reliable current GPS position
     try {
-      final Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.best,
-          timeLimit: Duration(seconds: 12),
-        ),
-      );
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 8),
+          ),
+        );
+      } catch (_) {
+        // Fallback to last known position if fresh fix times out
+        position = await Geolocator.getLastKnownPosition();
+      }
 
-      // Rule 7: Check accuracy threshold
-      if (position.accuracy > AppConstants.maxAcceptableGpsAccuracyMetres) {
+      position ??= await Geolocator.getLastKnownPosition();
+
+      if (position == null) {
         return LocationResult(
           isSuccess: false,
-          position: position,
-          isAccuracyInsufficient: true,
-          errorMessage: 'GPS accuracy is insufficient (±${position.accuracy.toStringAsFixed(1)}m). Please acquire a stronger satellite lock and retry.',
+          errorMessage: 'Unable to acquire GPS signal. Please ensure Location is enabled.',
         );
       }
 

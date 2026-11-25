@@ -305,24 +305,6 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                   onPressed: _startLocationVerification,
                   child: const Text('Retry Location Reading'),
                 ),
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.home_work_outlined),
-                  label: const Text('Proceed Anyway (Indoor Mode)'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  onPressed: () {
-                    if (_currentPosition != null) {
-                      setState(() {
-                        _state = LocationState.verifiedSuccess;
-                      });
-                      _proceedToChecklist();
-                    } else {
-                      _startLocationVerification();
-                    }
-                  },
-                ),
                 const SizedBox(height: 12),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
