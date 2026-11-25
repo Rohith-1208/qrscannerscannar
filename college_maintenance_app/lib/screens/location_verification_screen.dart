@@ -378,4 +378,27 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.dangerRed),
                 ),
-            
+                const SizedBox(height: 10),
+                Text(
+                  _errorMessage ?? 'An error occurred while accessing device location.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: _startLocationVerification,
+                  child: const Text('Try Again'),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Back'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
