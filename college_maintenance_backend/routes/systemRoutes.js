@@ -20,9 +20,12 @@ async function listSystems(req, res) {
         s.department, 
         s.building, 
         s.room_number, 
+        s.floor_number,
         s.latitude, 
         s.longitude, 
+        s.altitude,
         s.allowed_radius, 
+        s.altitude_tolerance,
         s.status, 
         s.created_at,
         q.qr_version,
@@ -58,6 +61,7 @@ async function listSystems(req, res) {
           sys.system_id,
           parseFloat(sys.latitude),
           parseFloat(sys.longitude),
+          parseFloat(sys.altitude || 0),
           parseFloat(sys.allowed_radius),
           ver
         );
@@ -92,9 +96,12 @@ async function createSystem(req, res) {
     const department = (req.body.department || '').trim();
     const building = (req.body.building || '').trim();
     const roomNumber = (req.body.room_number || '').trim();
+    const floorNumber = (req.body.floor_number || 'Ground Floor').trim();
     const latitude = parseFloat(req.body.latitude);
     const longitude = parseFloat(req.body.longitude);
+    const altitude = parseFloat(req.body.altitude !== undefined ? req.body.altitude : 0);
     const allowedRadius = Math.max(1, parseInt(req.body.allowed_radius || config.DEFAULT_ALLOWED_RADIUS_METRES, 10));
+    const altitudeTolerance = parseFloat(req.body.altitude_tolerance || 5.0);
 
     if (!systemId || !equipmentName || !department || !roomNumber) {
       return res.status(400).json({ success: false, error: 'System ID, Equipment Name, Department, and Room Number are required.' });
@@ -112,16 +119,16 @@ async function createSystem(req, res) {
 
     await connection.beginTransaction();
 
-    // 1. Insert System
+    // 1. Insert System with Altitude & Floor
     await connection.execute(
-      `INSERT INTO systems (system_id, equipment_name, equipment_type, department, building, room_number, latitude, longitude, allowed_radius, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'working')`,
-      [systemId, equipmentName, equipmentType, department, building, roomNumber, latitude, longitude, allowedRadius]
+      `INSERT INTO systems (system_id, equipment_name, equipment_type, department, building, room_number, floor_number, latitude, longitude, altitude, allowed_radius, altitude_tolerance, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'working')`,
+      [systemId, equipmentName, equipmentType, department, building, roomNumber, floorNumber, latitude, longitude, altitude, allowedRadius, altitudeTolerance]
     );
 
-    // 2. Generate Version 1 QR with HMAC-SHA256 signature
+    // 2. Generate Version 1 QR with HMAC-SHA256 signature including altitude
     const qrVersion = 1;
-    const signature = generateQrSignature(systemId, latitude, longitude, allowedRadius, qrVersion);
+    const signature = generateQrSignature(systemId, latitude, longitude, altitude, allowedRadius, qrVersion);
 
     await connection.execute(
       `INSERT INTO qr_codes (system_id, qr_version, signature, is_active) VALUES (?, ?, ?, 1)`,
@@ -183,25 +190,29 @@ async function updateSystem(req, res) {
     const department    = (req.body.department || existing.department).trim();
     const building      = (req.body.building || existing.building).trim();
     const roomNumber    = (req.body.room_number || existing.room_number).trim();
+    const floorNumber   = (req.body.floor_number || existing.floor_number || 'Ground Floor').trim();
     const status        = (req.body.status || existing.status).trim();
 
     const newLat = req.body.latitude !== undefined ? parseFloat(req.body.latitude) : parseFloat(existing.latitude);
     const newLon = req.body.longitude !== undefined ? parseFloat(req.body.longitude) : parseFloat(existing.longitude);
+    const newAlt = req.body.altitude !== undefined ? parseFloat(req.body.altitude) : parseFloat(existing.altitude || 0);
     const newRadius = req.body.allowed_radius !== undefined ? Math.max(1, parseInt(req.body.allowed_radius, 10)) : parseInt(existing.allowed_radius, 10);
+    const newAltitudeTolerance = req.body.altitude_tolerance !== undefined ? parseFloat(req.body.altitude_tolerance) : parseFloat(existing.altitude_tolerance || 5.0);
 
     const coordsChanged =
       Math.abs(newLat - parseFloat(existing.latitude)) > 0.000001 ||
       Math.abs(newLon - parseFloat(existing.longitude)) > 0.000001 ||
+      Math.abs(newAlt - parseFloat(existing.altitude || 0)) > 0.1 ||
       newRadius !== parseInt(existing.allowed_radius, 10);
 
     await connection.beginTransaction();
 
     await connection.execute(
       `UPDATE systems 
-       SET equipment_name = ?, equipment_type = ?, department = ?, building = ?, room_number = ?, 
-           latitude = ?, longitude = ?, allowed_radius = ?, status = ?, updated_at = NOW()
+       SET equipment_name = ?, equipment_type = ?, department = ?, building = ?, room_number = ?, floor_number = ?, 
+           latitude = ?, longitude = ?, altitude = ?, allowed_radius = ?, altitude_tolerance = ?, status = ?, updated_at = NOW()
        WHERE system_id = ?`,
-      [equipmentName, equipmentType, department, building, roomNumber, newLat, newLon, newRadius, status, systemId]
+      [equipmentName, equipmentType, department, building, roomNumber, floorNumber, newLat, newLon, newAlt, newRadius, newAltitudeTolerance, status, systemId]
     );
 
     let newQrData = null;
@@ -213,8 +224,8 @@ async function updateSystem(req, res) {
       // Invalidate old QR codes
       await connection.execute(`UPDATE qr_codes SET is_active = 0 WHERE system_id = ?`, [systemId]);
 
-      // Generate new HMAC-SHA256 signature
-      const signature = generateQrSignature(systemId, newLat, newLon, newRadius, nextVersion);
+      // Generate new HMAC-SHA256 signature with Altitude
+      const signature = generateQrSignature(systemId, newLat, newLon, newAlt, newRadius, nextVersion);
 
       await connection.execute(
         `INSERT INTO qr_codes (system_id, qr_version, signature, is_active) VALUES (?, ?, ?, 1)`,
@@ -225,6 +236,7 @@ async function updateSystem(req, res) {
         system_id: systemId,
         latitude: parseFloat(newLat.toFixed(6)),
         longitude: parseFloat(newLon.toFixed(6)),
+        altitude: parseFloat(newAlt.toFixed(2)),
         radius: newRadius,
         version: nextVersion,
         signature,

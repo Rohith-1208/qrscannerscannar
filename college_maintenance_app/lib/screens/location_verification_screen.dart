@@ -87,15 +87,27 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
       lon2: widget.qrPayload.longitude,
     );
 
-    // 3. Compare with permitted radius of 10 metres
+    // 3. Compare with permitted radius and altitude tolerance (floor level)
     final double allowedRadius = widget.qrPayload.radius;
+    final bool isHorizValid = distance <= allowedRadius;
 
-    if (distance <= allowedRadius) {
+    // Check vertical floor altitude if system has registered altitude (> 0)
+    bool isAltValid = true;
+    if (widget.qrPayload.altitude > 0 && position.altitude != 0.0) {
+      final double altDiff = (position.altitude - widget.qrPayload.altitude).abs();
+      // Allow standard floor tolerance of 5.5 metres
+      if (altDiff > 5.5) {
+        isAltValid = false;
+      }
+    }
+
+    if (isHorizValid && isAltValid) {
       // 4. Double check with Backend API for server-side verification evidence
       final Map<String, dynamic> backendVerify = await ApiService.verifyLocation(
         systemId: widget.qrPayload.systemId,
         agentLatitude: position.latitude,
         agentLongitude: position.longitude,
+        agentAltitude: position.altitude,
         gpsAccuracy: position.accuracy,
         qrSignature: widget.qrPayload.signature,
         qrVersion: widget.qrPayload.version,
@@ -113,13 +125,13 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
           _errorMessage = backendVerify['error'];
         });
       } else {
-        // Server rejected location proximity
+        // Server rejected location proximity or floor mismatch
         setState(() {
           _state = LocationState.outsideLocation;
         });
       }
     } else {
-      // Distance > 10 metres
+      // Outside radius or wrong floor level
       setState(() {
         _state = LocationState.outsideLocation;
       });

@@ -120,23 +120,47 @@
             </div>
           </div>
 
+          <div class="form-group">
+            <label>Building Floor Level *</label>
+            <select id="regFloor" class="form-control">
+              <option value="Ground Floor">Ground Floor</option>
+              <option value="1st Floor">1st Floor</option>
+              <option value="2nd Floor">2nd Floor</option>
+              <option value="3rd Floor">3rd Floor</option>
+              <option value="4th Floor">4th Floor</option>
+              <option value="5th Floor">5th Floor</option>
+              <option value="Basement">Basement</option>
+            </select>
+            <small style="color: #64748b;">Specify exact floor to enforce 3D vertical proximity verification.</small>
+          </div>
+
           <!-- GPS Geo-Fence Capture -->
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <span style="font-size: 13px; font-weight: 600; color: #1e3a8a;">Equipment GPS Location (Geo-Fence)</span>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="captureDeviceCoordinates('regLat', 'regLon', 'gpsStatusSpan')">
-                &#x25CE; Auto-Get Device GPS
+              <span style="font-size: 13px; font-weight: 600; color: #1e3a8a;">Equipment 3D GPS Location (Geo-Fence)</span>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="captureDeviceCoordinates('regLat', 'regLon', 'gpsStatusSpan', 'regAlt')">
+                &#x25CE; Auto-Get Device 3D GPS
               </button>
             </div>
             <div id="gpsStatusSpan" style="font-size: 12px; margin-bottom: 8px;"></div>
             <div class="form-grid-2">
-              <div class="form-group" style="margin-bottom: 0;">
+              <div class="form-group" style="margin-bottom: 8px;">
                 <label>Latitude *</label>
                 <input type="number" step="0.00000001" id="regLat" class="form-control" required placeholder="13.07510000">
               </div>
-              <div class="form-group" style="margin-bottom: 0;">
+              <div class="form-group" style="margin-bottom: 8px;">
                 <label>Longitude *</label>
                 <input type="number" step="0.00000001" id="regLon" class="form-control" required placeholder="80.11700000">
+              </div>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Altitude / Elevation (Metres)</label>
+                <input type="number" step="0.01" id="regAlt" class="form-control" placeholder="15.00" value="15.00">
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Vertical Floor Tolerance (&plusmn; Metres)</label>
+                <input type="number" step="0.1" id="regAltTolerance" class="form-control" value="5.0" min="1" max="50">
               </div>
             </div>
           </div>
@@ -206,28 +230,52 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label>Room / Lab Number *</label>
-            <input type="text" id="editRoom" class="form-control" required>
+          <div class="form-grid-2">
+            <div class="form-group">
+              <label>Room / Lab Number *</label>
+              <input type="text" id="editRoom" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Building Floor Level *</label>
+              <select id="editFloor" class="form-control">
+                <option value="Ground Floor">Ground Floor</option>
+                <option value="1st Floor">1st Floor</option>
+                <option value="2nd Floor">2nd Floor</option>
+                <option value="3rd Floor">3rd Floor</option>
+                <option value="4th Floor">4th Floor</option>
+                <option value="5th Floor">5th Floor</option>
+                <option value="Basement">Basement</option>
+              </select>
+            </div>
           </div>
 
           <!-- GPS Geo-Fence Capture -->
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <span style="font-size: 13px; font-weight: 600; color: #1e3a8a;">Equipment GPS Location (Geo-Fence)</span>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="captureDeviceCoordinates('editLat', 'editLon', 'editGpsStatusSpan')">
-                &#x25CE; Auto-Get Device GPS
+              <span style="font-size: 13px; font-weight: 600; color: #1e3a8a;">Equipment 3D GPS Location (Geo-Fence)</span>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="captureDeviceCoordinates('editLat', 'editLon', 'editGpsStatusSpan', 'editAlt')">
+                &#x25CE; Auto-Get Device 3D GPS
               </button>
             </div>
             <div id="editGpsStatusSpan" style="font-size: 12px; margin-bottom: 8px;"></div>
             <div class="form-grid-2">
-              <div class="form-group" style="margin-bottom: 0;">
+              <div class="form-group" style="margin-bottom: 8px;">
                 <label>Latitude *</label>
                 <input type="number" step="0.00000001" id="editLat" class="form-control" required placeholder="13.07510000">
               </div>
-              <div class="form-group" style="margin-bottom: 0;">
+              <div class="form-group" style="margin-bottom: 8px;">
                 <label>Longitude *</label>
                 <input type="number" step="0.00000001" id="editLon" class="form-control" required placeholder="80.11700000">
+              </div>
+            </div>
+            <div class="form-grid-2">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Altitude / Elevation (Metres)</label>
+                <input type="number" step="0.01" id="editAlt" class="form-control" placeholder="15.00">
+              </div>
+              <div class="form-group" style="margin-bottom: 0;">
+                <label>Vertical Floor Tolerance (&plusmn; Metres)</label>
+                <input type="number" step="0.1" id="editAltTolerance" class="form-control" value="5.0" min="1" max="50">
               </div>
             </div>
           </div>
@@ -300,6 +348,7 @@
           system_id: s.system_id,
           latitude: parseFloat(parseFloat(s.latitude).toFixed(6)),
           longitude: parseFloat(parseFloat(s.longitude).toFixed(6)),
+          altitude: parseFloat(parseFloat(s.altitude || 0).toFixed(2)),
           radius: parseInt(s.allowed_radius, 10),
           version: parseInt(s.qr_version || 1, 10),
           signature: s.signature || ''
@@ -315,12 +364,18 @@
             </td>
             <td>
               ${s.department}<br>
-              <small style="color: #64748b;">${s.building} - ${s.room_number}</small>
+              <small style="color: #64748b;">${s.building} - ${s.room_number}</small><br>
+              <span class="badge" style="background: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; margin-top: 2px; display: inline-block;">
+                🏢 ${s.floor_number || 'Ground Floor'}
+              </span>
             </td>
             <td>
-              <span style="font-family: monospace; font-size: 12px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">
+              <span style="font-family: monospace; font-size: 12px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; display: block; margin-bottom: 2px;">
                 ${parseFloat(s.latitude).toFixed(6)}, ${parseFloat(s.longitude).toFixed(6)}
               </span>
+              <small style="color: #475569; font-weight: 500;">
+                Alt: <b>${parseFloat(s.altitude || 0).toFixed(1)}m</b> (&plusmn;${parseFloat(s.altitude_tolerance || 5).toFixed(0)}m)
+              </small>
             </td>
             <td>${s.allowed_radius} metres</td>
             <td>
@@ -409,9 +464,12 @@
         department: document.getElementById('regDept').value.trim(),
         building: document.getElementById('regBuilding').value.trim(),
         room_number: document.getElementById('regRoom').value.trim(),
+        floor_number: document.getElementById('regFloor').value,
         latitude: parseFloat(document.getElementById('regLat').value),
         longitude: parseFloat(document.getElementById('regLon').value),
+        altitude: parseFloat(document.getElementById('regAlt').value || 0),
         allowed_radius: parseInt(document.getElementById('regRadius').value, 10),
+        altitude_tolerance: parseFloat(document.getElementById('regAltTolerance').value || 5.0),
       };
 
       const res = await authFetch('/api/systems/create', {
@@ -444,9 +502,12 @@
       document.getElementById('editDept').value = s.department;
       document.getElementById('editBuilding').value = s.building || '';
       document.getElementById('editRoom').value = s.room_number;
+      document.getElementById('editFloor').value = s.floor_number || 'Ground Floor';
       document.getElementById('editLat').value = parseFloat(s.latitude).toFixed(8);
       document.getElementById('editLon').value = parseFloat(s.longitude).toFixed(8);
-      document.getElementById('editRadius').value = s.allowed_radius || 10;
+      document.getElementById('editAlt').value = parseFloat(s.altitude || 0).toFixed(2);
+      document.getElementById('editRadius').value = s.allowed_radius || 50;
+      document.getElementById('editAltTolerance').value = parseFloat(s.altitude_tolerance || 5.0).toFixed(1);
       document.getElementById('editGpsStatusSpan').innerHTML = '';
 
       openModal('editSystemModal');
@@ -467,9 +528,12 @@
         department: document.getElementById('editDept').value.trim(),
         building: document.getElementById('editBuilding').value.trim(),
         room_number: document.getElementById('editRoom').value.trim(),
+        floor_number: document.getElementById('editFloor').value,
         latitude: parseFloat(document.getElementById('editLat').value),
         longitude: parseFloat(document.getElementById('editLon').value),
+        altitude: parseFloat(document.getElementById('editAlt').value || 0),
         allowed_radius: parseInt(document.getElementById('editRadius').value, 10),
+        altitude_tolerance: parseFloat(document.getElementById('editAltTolerance').value || 5.0),
       };
 
       const res = await authFetch('/api/systems/update', {

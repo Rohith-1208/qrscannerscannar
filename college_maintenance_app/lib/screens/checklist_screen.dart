@@ -146,6 +146,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       systemId: widget.systemId,
       agentLatitude: widget.agentPosition.latitude,
       agentLongitude: widget.agentPosition.longitude,
+      agentAltitude: widget.agentPosition.altitude,
       gpsAccuracy: widget.agentPosition.accuracy,
       qrSignature: widget.qrSignature,
       qrVersion: widget.qrVersion,

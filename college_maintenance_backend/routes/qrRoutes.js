@@ -37,6 +37,7 @@ async function generateQr(req, res) {
         systemId,
         parseFloat(system.latitude),
         parseFloat(system.longitude),
+        parseFloat(system.altitude || 0),
         parseFloat(system.allowed_radius),
         nextVersion
       );
@@ -56,6 +57,7 @@ async function generateQr(req, res) {
       system_id: system.system_id,
       latitude: parseFloat(parseFloat(system.latitude).toFixed(6)),
       longitude: parseFloat(parseFloat(system.longitude).toFixed(6)),
+      altitude: parseFloat(parseFloat(system.altitude || 0).toFixed(2)),
       radius: parseInt(system.allowed_radius, 10),
       version: parseInt(activeQr.qr_version, 10),
       signature: activeQr.signature,
@@ -79,6 +81,7 @@ async function verifyQr(req, res) {
     const systemId = (req.body.system_id || '').toUpperCase().trim();
     const latitude = parseFloat(req.body.latitude);
     const longitude = parseFloat(req.body.longitude);
+    const altitude = parseFloat(req.body.altitude !== undefined ? req.body.altitude : 0);
     const radius = parseFloat(req.body.radius);
     const version = parseInt(req.body.version, 10);
     const signature = (req.body.signature || '').trim();
@@ -92,7 +95,7 @@ async function verifyQr(req, res) {
     }
 
     // 1. Verify digital signature using backend secret
-    const isSignatureValid = verifyQrSignature(systemId, latitude, longitude, radius, version, signature);
+    const isSignatureValid = verifyQrSignature(systemId, latitude, longitude, altitude, radius, version, signature);
     if (!isSignatureValid) {
       return res.status(403).json({
         success: false,

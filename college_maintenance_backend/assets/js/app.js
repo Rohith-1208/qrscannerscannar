@@ -25,8 +25,8 @@ window.addEventListener('click', (e) => {
   }
 });
 
-// Auto-obtain GPS coordinates from browser Geolocation API
-function captureDeviceCoordinates(latInputId, lonInputId, statusSpanId) {
+// Auto-obtain GPS coordinates and Altitude from browser Geolocation API
+function captureDeviceCoordinates(latInputId, lonInputId, statusSpanId, altInputId) {
   const statusSpan = document.getElementById(statusSpanId);
   if (!navigator.geolocation) {
     if (statusSpan) statusSpan.innerHTML = '<span style="color:#dc2626">Geolocation not supported by this browser.</span>';
@@ -34,21 +34,25 @@ function captureDeviceCoordinates(latInputId, lonInputId, statusSpanId) {
     return;
   }
 
-  if (statusSpan) statusSpan.innerHTML = '<span style="color:#2563eb">Acquiring GPS fix...</span>';
+  if (statusSpan) statusSpan.innerHTML = '<span style="color:#2563eb">Acquiring 3D GPS fix...</span>';
 
   navigator.geolocation.getCurrentPosition(
     (position) => {
       const lat = position.coords.latitude.toFixed(8);
       const lon = position.coords.longitude.toFixed(8);
+      const alt = position.coords.altitude !== null && !isNaN(position.coords.altitude) ? position.coords.altitude.toFixed(2) : '';
       const acc = position.coords.accuracy.toFixed(1);
 
       const latInput = document.getElementById(latInputId);
       const lonInput = document.getElementById(lonInputId);
+      const altInput = altInputId ? document.getElementById(altInputId) : null;
       if (latInput) latInput.value = lat;
       if (lonInput) lonInput.value = lon;
+      if (altInput && alt) altInput.value = alt;
 
       if (statusSpan) {
-        statusSpan.innerHTML = `<span style="color:#059669">Acquired! Accuracy: &plusmn;${acc}m</span>`;
+        const altStr = alt ? ` | Alt: ${alt}m` : '';
+        statusSpan.innerHTML = `<span style="color:#059669">Acquired! Acc: &plusmn;${acc}m${altStr}</span>`;
       }
     },
     (err) => {

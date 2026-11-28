@@ -8,6 +8,7 @@ class QrPayloadModel {
   final String systemId;
   final double latitude;
   final double longitude;
+  final double altitude;
   final double radius;
   final int version;
   final String signature;
@@ -16,6 +17,7 @@ class QrPayloadModel {
     required this.systemId,
     required this.latitude,
     required this.longitude,
+    this.altitude = 0.0,
     required this.radius,
     required this.version,
     required this.signature,
@@ -30,6 +32,7 @@ class QrPayloadModel {
       final String sysId = (decoded['system_id'] ?? '').toString().trim();
       final double? lat = double.tryParse(decoded['latitude']?.toString() ?? '');
       final double? lon = double.tryParse(decoded['longitude']?.toString() ?? '');
+      final double alt = double.tryParse(decoded['altitude']?.toString() ?? '0') ?? 0.0;
       final double? rad = double.tryParse(decoded['radius']?.toString() ?? '10');
       final int? ver = int.tryParse(decoded['version']?.toString() ?? '1');
       final String sig = (decoded['signature'] ?? '').toString().trim();
@@ -42,6 +45,7 @@ class QrPayloadModel {
         systemId: sysId,
         latitude: lat,
         longitude: lon,
+        altitude: alt,
         radius: rad,
         version: ver,
         signature: sig,
@@ -56,6 +60,7 @@ class QrPayloadModel {
       'system_id': systemId,
       'latitude': latitude,
       'longitude': longitude,
+      'altitude': altitude,
       'radius': radius,
       'version': version,
       'signature': signature,

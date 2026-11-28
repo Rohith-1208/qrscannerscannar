@@ -73,23 +73,29 @@ class ApiService {
     required String systemId,
     required double agentLatitude,
     required double agentLongitude,
+    double? agentAltitude,
     required double gpsAccuracy,
     required String qrSignature,
     required int qrVersion,
   }) async {
     try {
       final Uri uri = Uri.parse('$_baseUrl/api/maintenance/verify-location.php');
+      final Map<String, dynamic> bodyMap = {
+        'system_id': systemId,
+        'agent_latitude': agentLatitude,
+        'agent_longitude': agentLongitude,
+        'gps_accuracy': gpsAccuracy,
+        'qr_signature': qrSignature,
+        'qr_version': qrVersion,
+      };
+      if (agentAltitude != null) {
+        bodyMap['agent_altitude'] = agentAltitude;
+      }
+
       final http.Response res = await http.post(
         uri,
         headers: _headers(),
-        body: jsonEncode({
-          'system_id': systemId,
-          'agent_latitude': agentLatitude,
-          'agent_longitude': agentLongitude,
-          'gps_accuracy': gpsAccuracy,
-          'qr_signature': qrSignature,
-          'qr_version': qrVersion,
-        }),
+        body: jsonEncode(bodyMap),
       ).timeout(const Duration(seconds: 12));
 
       final dynamic data = jsonDecode(res.body);
@@ -122,6 +128,7 @@ class ApiService {
     required String systemId,
     required double agentLatitude,
     required double agentLongitude,
+    double? agentAltitude,
     required double gpsAccuracy,
     required String qrSignature,
     required int qrVersion,
@@ -133,19 +140,24 @@ class ApiService {
       final List<Map<String, dynamic>> answersPayload =
           questions.map((q) => q.toSubmissionJson()).toList();
 
+      final Map<String, dynamic> bodyMap = {
+        'system_id': systemId,
+        'agent_latitude': agentLatitude,
+        'agent_longitude': agentLongitude,
+        'gps_accuracy': gpsAccuracy,
+        'qr_signature': qrSignature,
+        'qr_version': qrVersion,
+        'answers': answersPayload,
+        'notes': notes,
+      };
+      if (agentAltitude != null) {
+        bodyMap['agent_altitude'] = agentAltitude;
+      }
+
       final http.Response res = await http.post(
         uri,
         headers: _headers(),
-        body: jsonEncode({
-          'system_id': systemId,
-          'agent_latitude': agentLatitude,
-          'agent_longitude': agentLongitude,
-          'gps_accuracy': gpsAccuracy,
-          'qr_signature': qrSignature,
-          'qr_version': qrVersion,
-          'answers': answersPayload,
-          'notes': notes,
-        }),
+        body: jsonEncode(bodyMap),
       ).timeout(const Duration(seconds: 20));
 
       final dynamic data = jsonDecode(res.body);

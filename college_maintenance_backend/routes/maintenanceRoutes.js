@@ -46,6 +46,7 @@ async function verifyLocation(req, res) {
     const systemId = (req.body.system_id || '').toUpperCase().trim();
     const agentLatitude = parseFloat(req.body.agent_latitude);
     const agentLongitude = parseFloat(req.body.agent_longitude);
+    const agentAltitude = parseFloat(req.body.agent_altitude !== undefined ? req.body.agent_altitude : 0);
     const gpsAccuracy = parseFloat(req.body.gps_accuracy);
     const qrSignature = (req.body.qr_signature || '').trim();
     const qrVersion = parseInt(req.body.qr_version || 1, 10);
@@ -85,6 +86,7 @@ async function verifyLocation(req, res) {
         systemId,
         parseFloat(system.latitude),
         parseFloat(system.longitude),
+        parseFloat(system.altitude || 0),
         parseFloat(system.allowed_radius),
         qrVersion,
         qrSignature
@@ -94,26 +96,39 @@ async function verifyLocation(req, res) {
       }
     }
 
-    // 4. Calculate Distance
+    // 4. Calculate 3D Distance (Horizontal + Floor Elevation)
     const regLat = parseFloat(system.latitude);
     const regLon = parseFloat(system.longitude);
+    const regAlt = parseFloat(system.altitude || 0);
     const allowedRadius = parseFloat(system.allowed_radius);
+    const altitudeTolerance = parseFloat(system.altitude_tolerance || 5.0);
 
-    const distance = calculateHaversineDistance(regLat, regLon, agentLatitude, agentLongitude);
+    const horizontalDistance = calculateHaversineDistance(regLat, regLon, agentLatitude, agentLongitude);
+    const altitudeDiff = Math.abs(agentAltitude - regAlt);
+    const distance3D = Math.sqrt(horizontalDistance * horizontalDistance + altitudeDiff * altitudeDiff);
 
-    if (distance <= allowedRadius) {
+    // Floor altitude verification: agent must be on the registered floor
+    const floorVerified = (regAlt <= 0 || agentAltitude <= 0 || altitudeDiff <= altitudeTolerance);
+    const locationVerified = horizontalDistance <= allowedRadius && floorVerified;
+
+    if (locationVerified) {
       return res.json({
         success: true,
         verified: true,
         system_id: systemId,
         equipment_name: system.equipment_name,
         room_number: system.room_number,
+        floor_number: system.floor_number || 'Ground Floor',
         department: system.department,
         equipment_type: system.equipment_type,
         allowed_radius: allowedRadius,
+        altitude_tolerance: altitudeTolerance,
+        horizontal_distance: horizontalDistance,
+        altitude_difference: altitudeDiff,
+        distance_3d: Math.round(distance3D * 100) / 100,
       });
     } else {
-      // Distance > allowed radius: per Rule 6, mobile UI shows ONLY: "Not in correct location"
+      // Distance > allowed radius or wrong floor: per Rule 6, mobile UI shows ONLY: "Not in correct location"
       return res.json({
         success: false,
         verified: false,
@@ -134,6 +149,7 @@ async function submitReport(req, res) {
     const systemId = (req.body.system_id || '').toUpperCase().trim();
     const agentLatitude = parseFloat(req.body.agent_latitude);
     const agentLongitude = parseFloat(req.body.agent_longitude);
+    const agentAltitude = parseFloat(req.body.agent_altitude !== undefined ? req.body.agent_altitude : 0);
     const gpsAccuracy = parseFloat(req.body.gps_accuracy);
     const qrSignature = (req.body.qr_signature || '').trim();
     const qrVersion = parseInt(req.body.qr_version || 1, 10);
@@ -169,6 +185,7 @@ async function submitReport(req, res) {
         systemId,
         parseFloat(system.latitude),
         parseFloat(system.longitude),
+        parseFloat(system.altitude || 0),
         parseFloat(system.allowed_radius),
         qrVersion,
         qrSignature
@@ -178,18 +195,21 @@ async function submitReport(req, res) {
       }
     }
 
-    // 4. Security: Independent Server-Side Haversine Verification
+    // 4. Security: Independent Server-Side Haversine & Altitude Verification
     if (gpsAccuracy > config.MAX_ACCEPTABLE_GPS_ACCURACY_METRES) {
       return res.status(400).json({ success: false, error: 'Server rejection: GPS accuracy is insufficient for verified submission.' });
     }
 
     const regLat = parseFloat(system.latitude);
     const regLon = parseFloat(system.longitude);
+    const regAlt = parseFloat(system.altitude || 0);
     const allowedRadius = parseFloat(system.allowed_radius);
+    const altitudeTolerance = parseFloat(system.altitude_tolerance || 5.0);
 
     const calculatedDistance = calculateHaversineDistance(regLat, regLon, agentLatitude, agentLongitude);
+    const altDiff = Math.abs(agentAltitude - regAlt);
 
-    if (calculatedDistance > allowedRadius) {
+    if (calculatedDistance > allowedRadius || (regAlt > 0 && agentAltitude > 0 && altDiff > altitudeTolerance)) {
       return res.status(403).json({ success: false, error: 'Not in correct location' });
     }
 
@@ -265,11 +285,11 @@ async function submitReport(req, res) {
       [reportId, systemId, agentId, currentDate, currentTime, overallStatus, notes]
     );
 
-    // 2. Insert Geo Verification
+    // 2. Insert Geo Verification with Altitude
     await connection.execute(
-      `INSERT INTO location_verifications (report_id, registered_latitude, registered_longitude, agent_latitude, agent_longitude, calculated_distance, gps_accuracy, verification_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'verified')`,
-      [reportId, regLat, regLon, agentLatitude, agentLongitude, calculatedDistance, gpsAccuracy]
+      `INSERT INTO location_verifications (report_id, registered_latitude, registered_longitude, registered_altitude, agent_latitude, agent_longitude, agent_altitude, calculated_distance, altitude_difference, gps_accuracy, verification_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified')`,
+      [reportId, regLat, regLon, regAlt, agentLatitude, agentLongitude, agentAltitude, calculatedDistance, altDiff, gpsAccuracy]
     );
 
     // 3. Insert Answers
