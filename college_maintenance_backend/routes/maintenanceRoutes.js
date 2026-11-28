@@ -108,8 +108,12 @@ async function verifyLocation(req, res) {
     const distance3D = Math.sqrt(horizontalDistance * horizontalDistance + altitudeDiff * altitudeDiff);
 
     // Floor altitude verification: agent must be on the registered floor
-    const floorVerified = (regAlt <= 0 || agentAltitude <= 0 || altitudeDiff <= altitudeTolerance);
+    // Handles relative floor levels vs WGS-84 ellipsoidal datum differences (> 35m)
+    const datumMismatch = Math.abs(agentAltitude - regAlt) > 35.0;
+    const floorVerified = (regAlt <= 0 || agentAltitude <= 0 || datumMismatch || altitudeDiff <= altitudeTolerance);
     const locationVerified = horizontalDistance <= allowedRadius && floorVerified;
+
+    console.log(`[verify-location] System: ${systemId}, Agent GPS: (${agentLatitude.toFixed(6)}, ${agentLongitude.toFixed(6)}, alt: ${agentAltitude.toFixed(1)}m), Reg: (${regLat.toFixed(6)}, ${regLon.toFixed(6)}, alt: ${regAlt.toFixed(1)}m), HorizDist: ${horizontalDistance.toFixed(2)}m (Max: ${allowedRadius}m), AltDiff: ${altitudeDiff.toFixed(2)}m, Verified: ${locationVerified}`);
 
     if (locationVerified) {
       return res.json({

@@ -92,11 +92,11 @@ class _LocationVerificationScreenState extends State<LocationVerificationScreen>
     final bool isHorizValid = distance <= allowedRadius;
 
     // Check vertical floor altitude if system has registered altitude (> 0)
+    // Note: If altitude difference > 35m, it indicates a GPS datum difference (ellipsoidal vs relative floor height)
     bool isAltValid = true;
     if (widget.qrPayload.altitude > 0 && position.altitude != 0.0) {
       final double altDiff = (position.altitude - widget.qrPayload.altitude).abs();
-      // Allow standard floor tolerance of 5.5 metres
-      if (altDiff > 5.5) {
+      if (altDiff <= 35.0 && altDiff > 5.5) {
         isAltValid = false;
       }
     }
